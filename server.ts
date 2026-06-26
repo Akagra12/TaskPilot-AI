@@ -396,107 +396,137 @@ app.post("/api/auth/login", (req, res) => {
 
 // Task Management
 app.get("/api/tasks", (req, res) => {
-  const username = req.headers["x-user-username"] as string;
-  if (!username) return res.status(401).json({ error: "Unauthorized. Please log in." });
-  const db = readUserDB(username);
-  if (!db) return res.status(401).json({ error: "User session not found." });
-  res.json(db.tasks);
+  try {
+    const username = req.headers["x-user-username"] as string;
+    if (!username) return res.status(401).json({ error: "Unauthorized. Please log in." });
+    const db = readUserDB(username);
+    if (!db) return res.status(401).json({ error: "User session not found." });
+    res.json(db.tasks || []);
+  } catch (err: any) {
+    console.error("Error fetching tasks:", err);
+    res.status(500).json({ error: "Failed to fetch tasks", details: err.message, stack: err.stack });
+  }
 });
 
 app.post("/api/tasks", (req, res) => {
-  const username = req.headers["x-user-username"] as string;
-  if (!username) return res.status(401).json({ error: "Unauthorized. Please log in." });
-  const db = readUserDB(username);
-  if (!db) return res.status(401).json({ error: "User session not found." });
+  try {
+    const username = req.headers["x-user-username"] as string;
+    if (!username) return res.status(401).json({ error: "Unauthorized. Please log in." });
+    const db = readUserDB(username);
+    if (!db) return res.status(401).json({ error: "User session not found." });
 
-  const { title, description, deadline, priority, estimatedHours, category, alarmType } = req.body;
-  
-  if (!title) {
-    return res.status(400).json({ error: "Task title is required." });
+    const { title, description, deadline, priority, estimatedHours, category, alarmType } = req.body || {};
+    
+    if (!title) {
+      return res.status(400).json({ error: "Task title is required." });
+    }
+
+    const newTask: Task = {
+      id: `task-${Date.now()}`,
+      title,
+      description: description || "",
+      deadline: deadline || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+      priority: priority || "medium",
+      estimatedHours: Number(estimatedHours) || 1,
+      timeSpent: 0,
+      status: "pending",
+      subtasks: [],
+      category: category || "General",
+      createdAt: new Date().toISOString(),
+      alarmType: alarmType || "none",
+      alarmTriggered: false,
+    };
+
+    db.tasks.push(newTask);
+    writeUserDB(username, db);
+    res.status(201).json(newTask);
+  } catch (err: any) {
+    console.error("Error creating task:", err);
+    res.status(500).json({ error: "Failed to create task", details: err.message, stack: err.stack });
   }
-
-  const newTask: Task = {
-    id: `task-${Date.now()}`,
-    title,
-    description: description || "",
-    deadline: deadline || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-    priority: priority || "medium",
-    estimatedHours: Number(estimatedHours) || 1,
-    timeSpent: 0,
-    status: "pending",
-    subtasks: [],
-    category: category || "General",
-    createdAt: new Date().toISOString(),
-    alarmType: alarmType || "none",
-    alarmTriggered: false,
-  };
-
-  db.tasks.push(newTask);
-  writeUserDB(username, db);
-  res.status(201).json(newTask);
 });
 
 app.put("/api/tasks/:id", (req, res) => {
-  const username = req.headers["x-user-username"] as string;
-  if (!username) return res.status(401).json({ error: "Unauthorized. Please log in." });
-  const db = readUserDB(username);
-  if (!db) return res.status(401).json({ error: "User session not found." });
+  try {
+    const username = req.headers["x-user-username"] as string;
+    if (!username) return res.status(401).json({ error: "Unauthorized. Please log in." });
+    const db = readUserDB(username);
+    if (!db) return res.status(401).json({ error: "User session not found." });
 
-  const { id } = req.params;
-  const taskIndex = db.tasks.findIndex((t) => t.id === id);
+    const { id } = req.params;
+    const taskIndex = db.tasks.findIndex((t) => t.id === id);
 
-  if (taskIndex === -1) {
-    return res.status(404).json({ error: "Task not found." });
+    if (taskIndex === -1) {
+      return res.status(404).json({ error: "Task not found." });
+    }
+
+    db.tasks[taskIndex] = {
+      ...db.tasks[taskIndex],
+      ...(req.body || {}),
+    };
+
+    writeUserDB(username, db);
+    res.json(db.tasks[taskIndex]);
+  } catch (err: any) {
+    console.error("Error updating task:", err);
+    res.status(500).json({ error: "Failed to update task", details: err.message, stack: err.stack });
   }
-
-  db.tasks[taskIndex] = {
-    ...db.tasks[taskIndex],
-    ...req.body,
-  };
-
-  writeUserDB(username, db);
-  res.json(db.tasks[taskIndex]);
 });
 
 app.delete("/api/tasks/:id", (req, res) => {
-  const username = req.headers["x-user-username"] as string;
-  if (!username) return res.status(401).json({ error: "Unauthorized. Please log in." });
-  const db = readUserDB(username);
-  if (!db) return res.status(401).json({ error: "User session not found." });
+  try {
+    const username = req.headers["x-user-username"] as string;
+    if (!username) return res.status(401).json({ error: "Unauthorized. Please log in." });
+    const db = readUserDB(username);
+    if (!db) return res.status(401).json({ error: "User session not found." });
 
-  const { id } = req.params;
-  const taskIndex = db.tasks.findIndex((t) => t.id === id);
+    const { id } = req.params;
+    const taskIndex = db.tasks.findIndex((t) => t.id === id);
 
-  if (taskIndex === -1) {
-    return res.status(404).json({ error: "Task not found." });
+    if (taskIndex === -1) {
+      return res.status(404).json({ error: "Task not found." });
+    }
+
+    const deleted = db.tasks.splice(taskIndex, 1);
+    writeUserDB(username, db);
+    res.json(deleted[0]);
+  } catch (err: any) {
+    console.error("Error deleting task:", err);
+    res.status(500).json({ error: "Failed to delete task", details: err.message, stack: err.stack });
   }
-
-  const deleted = db.tasks.splice(taskIndex, 1);
-  writeUserDB(username, db);
-  res.json(deleted[0]);
 });
 
 // Profile Management
 app.get("/api/profile", (req, res) => {
-  const username = req.headers["x-user-username"] as string;
-  if (!username) return res.status(401).json({ error: "Unauthorized. Please log in." });
-  const db = readUserDB(username);
-  if (!db) return res.status(401).json({ error: "User session not found." });
-  res.json(db.profile);
+  try {
+    const username = req.headers["x-user-username"] as string;
+    if (!username) return res.status(401).json({ error: "Unauthorized. Please log in." });
+    const db = readUserDB(username);
+    if (!db) return res.status(401).json({ error: "User session not found." });
+    res.json(db.profile);
+  } catch (err: any) {
+    console.error("Error reading profile:", err);
+    res.status(500).json({ error: "Failed to read profile", details: err.message, stack: err.stack });
+  }
 });
 
 app.put("/api/profile", (req, res) => {
-  const username = req.headers["x-user-username"] as string;
-  if (!username) return res.status(401).json({ error: "Unauthorized. Please log in." });
-  const db = readUserDB(username);
-  if (!db) return res.status(401).json({ error: "User session not found." });
+  try {
+    const username = req.headers["x-user-username"] as string;
+    if (!username) return res.status(401).json({ error: "Unauthorized. Please log in." });
+    const db = readUserDB(username);
+    if (!db) return res.status(401).json({ error: "User session not found." });
 
-  db.profile = {
-    ...db.profile,
-    ...req.body,
-  };
-  writeUserDB(username, db);
-  res.json(db.profile);
+    db.profile = {
+      ...db.profile,
+      ...(req.body || {}),
+    };
+    writeUserDB(username, db);
+    res.json(db.profile);
+  } catch (err: any) {
+    console.error("Error updating profile:", err);
+    res.status(500).json({ error: "Failed to update profile", details: err.message, stack: err.stack });
+  }
 });
 
 // --- AI Service Endpoints via Google Gemini ---
