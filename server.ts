@@ -10,6 +10,19 @@ const app = express();
 const PORT = 3000;
 
 const DB_PATH = (() => {
+  if (process.env.VERCEL) {
+    const tmpDbPath = "/tmp/database.json";
+    try {
+      const localDbPath = path.join(process.cwd(), "database.json");
+      if (!fs.existsSync(tmpDbPath) && fs.existsSync(localDbPath)) {
+        fs.copyFileSync(localDbPath, tmpDbPath);
+      }
+    } catch (err) {
+      console.error("Vercel DB copy failed:", err);
+    }
+    return tmpDbPath;
+  }
+
   try {
     const testPath = path.join(process.cwd(), ".write_test");
     fs.writeFileSync(testPath, "test");
@@ -37,6 +50,15 @@ const DB_PATH = (() => {
 
 // Express middleware
 app.use(express.json());
+
+// Global logging middleware to file
+app.use((req, res, next) => {
+  const logMsg = `[${new Date().toISOString()}] ${req.method} ${req.url}\n`;
+  try {
+    fs.appendFileSync(path.join(process.cwd(), "server_debug.log"), logMsg);
+  } catch (e) {}
+  next();
+});
 
 // Dynamic Gemini AI client helper
 function getGeminiClient(userApiKey?: string): GoogleGenAI {
@@ -188,7 +210,13 @@ function readDB(): MultiUserDB {
       return db;
     }
 
-    return parsed;
+    if (!parsed || typeof parsed !== "object") {
+      return { users: {} };
+    }
+    if (!parsed.users) {
+      parsed.users = {};
+    }
+    return parsed as MultiUserDB;
   } catch (err) {
     console.error("Error reading database:", err);
     return { users: {} };
@@ -841,6 +869,19 @@ app.delete("/api/ai/coach", (req, res) => {
   ];
   writeUserDB(username, db);
   res.json(db.coachChat);
+});
+
+// Express error handling middleware to catch unhandled errors
+app.use((err: any, req: any, res: any, next: any) => {
+  const errMsg = `[${new Date().toISOString()}] ERROR: ${err.message || err}\nSTACK: ${err.stack || ""}\n`;
+  try {
+    fs.appendFileSync(path.join(process.cwd(), "server_debug.log"), errMsg);
+  } catch (e) {}
+  if (!res.headersSent) {
+    res.status(500).json({ error: "Internal Server Error in Middleware", details: err.message });
+  } else {
+    next(err);
+  }
 });
 
 // --- Vite & Client Integration ---
