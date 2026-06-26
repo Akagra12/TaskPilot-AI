@@ -5,7 +5,6 @@ import DashboardView from "./components/DashboardView";
 import PlannerView from "./components/PlannerView";
 import CoachView from "./components/CoachView";
 import ProfileSettingsView from "./components/ProfileSettingsView";
-import AuthView from "./components/AuthView";
 import { 
   Zap, ListTodo, Calendar, Bot, User, ShieldAlert, Sparkles, Award
 } from "lucide-react";
@@ -20,24 +19,15 @@ export default function App() {
     focusGoal: "Conquer my goals with deep focus, high quality execution, and optimized task prioritization."
   });
 
-  // Multi-user authentication session state
-  const [currentUser, setCurrentUser] = useState<string | null>(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("aipilot_user");
-    }
-    return null;
-  });
+  // Single default active user session bypassing login/signup screens
+  const [currentUser] = useState<string>("default");
 
   // Authenticated fetch helper injecting x-user-username header
   const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
-    const user = currentUser || (typeof window !== "undefined" ? localStorage.getItem("aipilot_user") : null);
     const headers = {
       ...(options.headers || {}),
+      "x-user-username": "default"
     } as any;
-    
-    if (user) {
-      headers["x-user-username"] = user;
-    }
     
     return fetch(url, {
       ...options,
@@ -45,23 +35,8 @@ export default function App() {
     });
   };
 
-  const handleAuthSuccess = (username: string, userProfile: Profile) => {
-    localStorage.setItem("aipilot_user", username);
-    setCurrentUser(username);
+  const handleUpdateProfileLocal = (userProfile: Profile) => {
     setProfile(userProfile);
-    setActiveTab("dashboard");
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem("aipilot_user");
-    setCurrentUser(null);
-    setTasks([]);
-    setProfile({
-      name: "Developer",
-      productivityStyle: "Sprint Finisher",
-      focusGoal: "Conquer my goals with deep focus, high quality execution, and optimized task prioritization."
-    });
-    setActiveTab("landing");
   };
   
   // Active Alarm State
@@ -340,12 +315,8 @@ export default function App() {
     setActiveTab("dashboard");
   };
 
-  if (activeTab === "landing" && !currentUser) {
+  if (activeTab === "landing") {
     return <LandingView onEnterApp={() => setActiveTab("dashboard")} />;
-  }
-
-  if (!currentUser) {
-    return <AuthView onAuthSuccess={handleAuthSuccess} />;
   }
 
   return (
@@ -405,18 +376,12 @@ export default function App() {
           </button>
         </nav>
 
-        {/* Action badge & Logout */}
+        {/* Action badge */}
         <div className="hidden md:flex items-center gap-3">
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-xs font-mono text-amber-400 capitalize">
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-900 border border-slate-800 text-xs font-mono text-amber-400">
             <Award className="w-3.5 h-3.5 text-amber-500" />
-            <span>{currentUser} workspace</span>
+            <span>Companion Workspace</span>
           </div>
-          <button
-            onClick={handleLogout}
-            className="text-xs font-sans font-semibold text-rose-400 hover:text-rose-300 bg-rose-950/25 border border-rose-900/30 px-3 py-1.5 rounded-xl cursor-pointer transition-colors"
-          >
-            Sign Out
-          </button>
         </div>
       </header>
 

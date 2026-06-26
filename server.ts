@@ -51,6 +51,14 @@ const DB_PATH = (() => {
 // Express middleware
 app.use(express.json());
 
+// Set default username header if missing to bypass login/signup entirely
+app.use((req, res, next) => {
+  if (!req.headers["x-user-username"]) {
+    req.headers["x-user-username"] = "default";
+  }
+  next();
+});
+
 // Global logging middleware to file
 app.use((req, res, next) => {
   const logMsg = `[${new Date().toISOString()}] ${req.method} ${req.url}\n`;
@@ -231,11 +239,33 @@ function writeDB(db: MultiUserDB) {
   }
 }
 
-function readUserDB(username: string): DB | null {
-  if (!username) return null;
+function readUserDB(username?: string): DB {
+  const targetUsername = (username || "default").toLowerCase().trim();
   const db = readDB();
-  const user = db.users[username.toLowerCase().trim()];
-  if (!user) return null;
+  let user = db.users[targetUsername];
+  if (!user) {
+    db.users[targetUsername] = {
+      username: targetUsername,
+      passwordHash: "default",
+      tasks: [],
+      profile: {
+        name: "Developer",
+        productivityStyle: "Sprint Finisher",
+        focusGoal: "Conquer my goals with deep focus, high quality execution, and optimized task prioritization.",
+        geminiApiKey: ""
+      },
+      coachChat: [
+        {
+          role: "model",
+          text: "Hello! I am your AIPilot Productivity Coach. I'm here to help you navigate your priority targets, break down massive deadlines, and maintain focus. What are we shipping today?",
+          timestamp: new Date().toISOString()
+        }
+      ],
+      dailyPlan: null
+    };
+    writeDB(db);
+    user = db.users[targetUsername];
+  }
   return {
     tasks: user.tasks || [],
     profile: user.profile || {
@@ -249,17 +279,30 @@ function readUserDB(username: string): DB | null {
   };
 }
 
-function writeUserDB(username: string, userDB: DB) {
-  if (!username) return;
+function writeUserDB(username: string | undefined, userDB: DB) {
+  const targetUsername = (username || "default").toLowerCase().trim();
   const db = readDB();
-  const lowerUsername = username.toLowerCase().trim();
-  if (db.users[lowerUsername]) {
-    db.users[lowerUsername].tasks = userDB.tasks;
-    db.users[lowerUsername].profile = userDB.profile;
-    db.users[lowerUsername].coachChat = userDB.coachChat;
-    db.users[lowerUsername].dailyPlan = userDB.dailyPlan;
-    writeDB(db);
+  if (!db.users[targetUsername]) {
+    db.users[targetUsername] = {
+      username: targetUsername,
+      passwordHash: "default",
+      tasks: userDB.tasks || [],
+      profile: userDB.profile || {
+        name: "Developer",
+        productivityStyle: "Sprint Finisher",
+        focusGoal: "Conquer my goals with deep focus, high quality execution, and optimized task prioritization.",
+        geminiApiKey: ""
+      },
+      coachChat: userDB.coachChat || [],
+      dailyPlan: userDB.dailyPlan || null
+    };
+  } else {
+    db.users[targetUsername].tasks = userDB.tasks;
+    db.users[targetUsername].profile = userDB.profile;
+    db.users[targetUsername].coachChat = userDB.coachChat;
+    db.users[targetUsername].dailyPlan = userDB.dailyPlan;
   }
+  writeDB(db);
 }
 
 // --- REST API Endpoints ---
