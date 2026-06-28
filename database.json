@@ -18,6 +18,41 @@
         }
       ],
       "dailyPlan": null
+    },
+    "sed": {
+      "username": "sed",
+      "passwordHash": "ken5jYxFd9KVs6Z",
+      "tasks": [
+        {
+          "id": "task-1782640566730",
+          "title": "dcdf",
+          "description": "",
+          "deadline": "2026-06-29T06:30:00.000Z",
+          "priority": "medium",
+          "estimatedHours": 2,
+          "timeSpent": 0,
+          "status": "pending",
+          "subtasks": [],
+          "category": "Development",
+          "createdAt": "2026-06-28T09:56:06.730Z",
+          "alarmType": "none",
+          "alarmTriggered": false
+        }
+      ],
+      "profile": {
+        "name": "dvfv",
+        "productivityStyle": "Sprint Finisher",
+        "focusGoal": "Conquer my goals with deep focus, high quality execution, and optimized task prioritization.",
+        "geminiApiKey": ""
+      },
+      "coachChat": [
+        {
+          "role": "model",
+          "text": "Hello dvfv! I am your AIPilot Productivity Coach. I'm here to help you navigate your priority targets, break down massive deadlines, and maintain focus. What are we shipping today?",
+          "timestamp": "2026-06-28T09:55:56.192Z"
+        }
+      ],
+      "dailyPlan": null
     }
   }
 }
