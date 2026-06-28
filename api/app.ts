@@ -312,6 +312,16 @@ function writeUserDB(username: string | undefined, userDB: DB) {
 
 // --- REST API Endpoints ---
 
+app.get("/api/health", (req, res) => {
+  res.json({ 
+    status: "ok", 
+    env: process.env.NODE_ENV, 
+    isServerless,
+    dbPath: DB_PATH,
+    dbExists: fs.existsSync(DB_PATH)
+  });
+});
+
 // Auth Endpoints
 app.post("/api/auth/signup", (req, res) => {
   try {
