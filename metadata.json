@@ -1,0 +1,6 @@
+{
+  "name": "Deadline Hero AI",
+  "description": "An AI-powered productivity system featuring proactive task breakdown, automated prioritization, dynamic daily schedules, a productivity coach, and a signature rescue mode to prevent missed deadlines.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
