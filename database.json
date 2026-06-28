@@ -1,0 +1,23 @@
+{
+  "users": {
+    "default": {
+      "username": "default",
+      "passwordHash": "default",
+      "tasks": [],
+      "profile": {
+        "name": "Developer",
+        "productivityStyle": "Sprint Finisher",
+        "focusGoal": "Conquer my goals with deep focus, high quality execution, and optimized task prioritization.",
+        "geminiApiKey": ""
+      },
+      "coachChat": [
+        {
+          "role": "model",
+          "text": "Hello! I am your AIPilot Productivity Coach. I'm here to help you navigate your priority targets, break down massive deadlines, and maintain focus. What are we shipping today?",
+          "timestamp": "2026-06-26T10:33:00.000Z"
+        }
+      ],
+      "dailyPlan": null
+    }
+  }
+}

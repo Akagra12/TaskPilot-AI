@@ -57,7 +57,14 @@ export default function AuthView({ initialMode = "login", onAuthSuccess, onBack 
           })
         });
 
-        const data = await res.json();
+        let data: any = {};
+        const contentType = res.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+          data = await res.json();
+        } else {
+          const text = await res.text();
+          throw new Error(text || `Server returned status ${res.status}`);
+        }
 
         if (!res.ok) {
           setError(data.error || "Signup failed. Please try again.");
@@ -90,7 +97,14 @@ export default function AuthView({ initialMode = "login", onAuthSuccess, onBack 
           })
         });
 
-        const data = await res.json();
+        let data: any = {};
+        const contentType = res.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+          data = await res.json();
+        } else {
+          const text = await res.text();
+          throw new Error(text || `Server returned status ${res.status}`);
+        }
 
         if (!res.ok) {
           setError(data.error || "Login failed. Check your credentials.");
@@ -107,7 +121,7 @@ export default function AuthView({ initialMode = "login", onAuthSuccess, onBack 
       }
     } catch (err: any) {
       console.error("Auth error:", err);
-      setError("Connection failed. Please check your network and try again.");
+      setError(err.message || "Connection failed. Please check your network and try again.");
     } finally {
       setIsLoading(false);
     }
