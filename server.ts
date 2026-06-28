@@ -9,8 +9,14 @@ dotenv.config();
 const app = express();
 const PORT = 3000;
 
+const isServerless = process.env.VERCEL === "1" || 
+                     process.env.VERCEL === "true" || 
+                     !!process.env.NOW_REGION || 
+                     !!process.env.AWS_LAMBDA_FUNCTION_VERSION ||
+                     !!process.env.LAMBDA_TASK_ROOT;
+
 const DB_PATH = (() => {
-  if (process.env.VERCEL) {
+  if (isServerless) {
     const tmpDbPath = "/tmp/database.json";
     try {
       const localDbPath = path.join(process.cwd(), "database.json");
@@ -48,6 +54,8 @@ const DB_PATH = (() => {
   }
 })();
 
+const DEBUG_LOG_PATH = isServerless ? "/tmp/server_debug.log" : path.join(process.cwd(), "server_debug.log");
+
 // Express middleware
 app.use(express.json());
 
@@ -57,7 +65,7 @@ app.use(express.json());
 app.use((req, res, next) => {
   const logMsg = `[${new Date().toISOString()}] ${req.method} ${req.url}\n`;
   try {
-    fs.appendFileSync(path.join(process.cwd(), "server_debug.log"), logMsg);
+    fs.appendFileSync(DEBUG_LOG_PATH, logMsg);
   } catch (e) {}
   next();
 });
@@ -175,7 +183,29 @@ const initialDB: DB = {
 function readDB(): MultiUserDB {
   try {
     if (!fs.existsSync(DB_PATH)) {
-      const db: MultiUserDB = { users: {} };
+      const db: MultiUserDB = {
+        users: {
+          "default": {
+            username: "default",
+            passwordHash: "default",
+            tasks: [],
+            profile: {
+              name: "Developer",
+              productivityStyle: "Sprint Finisher",
+              focusGoal: "Conquer my goals with deep focus, high quality execution, and optimized task prioritization.",
+              geminiApiKey: ""
+            },
+            coachChat: [
+              {
+                role: "model",
+                text: "Hello! I am your AIPilot Productivity Coach. I'm here to help you navigate your priority targets, break down massive deadlines, and maintain focus. What are we shipping today?",
+                timestamp: new Date().toISOString()
+              }
+            ],
+            dailyPlan: null
+          }
+        }
+      };
       fs.writeFileSync(DB_PATH, JSON.stringify(db, null, 2));
       return db;
     }
@@ -942,7 +972,7 @@ app.delete("/api/ai/coach", (req, res) => {
 app.use((err: any, req: any, res: any, next: any) => {
   const errMsg = `[${new Date().toISOString()}] ERROR: ${err.message || err}\nSTACK: ${err.stack || ""}\n`;
   try {
-    fs.appendFileSync(path.join(process.cwd(), "server_debug.log"), errMsg);
+    fs.appendFileSync(DEBUG_LOG_PATH, errMsg);
   } catch (e) {}
   if (!res.headersSent) {
     res.status(500).json({ error: "Internal Server Error in Middleware", details: err.message });
@@ -975,7 +1005,7 @@ async function startServer() {
   });
 }
 
-if (!process.env.VERCEL) {
+if (!isServerless) {
   startServer();
 }
 
